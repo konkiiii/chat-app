@@ -1,0 +1,43 @@
+.wrapper {
+  display: flex;
+}
+.king_side_bar {
+  height: 100vh;
+  width: 300px;
+  background-color: #253141;
+  /* padding: 0 20px; */
+}
+.header_side_bar {
+  height: 100px;
+  padding: 0 20px;
+}
+.center_side_bar {
+  background-color: #2f3e51;
+  height: calc(100vh - 100px);
+  padding: 0 20px;
+}
+.king_main_chat {
+  width: calc(100% - 300px);
+}
+.header_main_chat {
+  background-color: #ffffff;
+  height: 100px;
+  padding: 0 40px;
+}
+.center_main_chat{
+  background-color: #fafafa;
+  height: calc(100vh - 190px);
+  padding: 46px 40px 0;
+}
+.send_main_chat{
+  background-color: #dddddd;
+  height: 90px;
+  padding: 20px 40px;
+}
+
+/* デザイン確認用のダミーボックス <div class="dammie"></div>を入れる */
+.dammie {
+  background-color: aqua;
+  height: 100%;
+  width: 100%;
+}
