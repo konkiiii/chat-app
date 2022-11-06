@@ -1,0 +1,24 @@
+・Active Storageの導入
+  ・ImageMagick(画像加工ツールの導入)をインストールする
+    % brew install imagemagick (ターミナル)
+     ※VScodeのターミナルで実装するとエラーが起きるのでMac側のターミナルで実装する
+  ・Gemをインストール
+    ※Gemfileの一番下に記述
+    gem 'mini_magick'
+    gem 'image_processing', '~> 1.2'
+
+    % bundle install （ターミナル）
+    ローカルサーバーを再起動する
+  ・Active Storageをインストールする
+    % rails active_storage:install
+    % rails db:migrate
+  
+・画像を保存する
+  ・Active StorageのテーブルとMessagesテーブルのアソシエーションを定義
+    ・has_one_attachedメソッド
+      class モデル < ApplocationRecord
+        has_one_attached :ファイル名(添付するファイルがわかる名前にする)
+      end
+    app/models/message.rbに記述
+    has_one_attached :image
+  ・messages_controller.rbにて、imageカラムの保存を許可
