@@ -73,7 +73,7 @@
   margin-bottom: 40px;
 }
 .chat_content_propaty{
-  display: flex;
+  /* display: flex; */
   padding-top: 10px;
 }
 .chat_content_name {
