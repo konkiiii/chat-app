@@ -52,4 +52,16 @@
     ※x はエックスを使用する
   <%= image_tag message.image.variant(resize: '500x500'), class: 'message-image'if message.image.attached? %>
 
-  
+・画像かテキストだけのメッセージを送信する
+  ・画像の有無でバリデーションを行うか条件分岐させる
+    app/models/message.rbに記述
+      class Message < ApplicationRecord
+      〜省略〜
+        validates :content, presence: true, unless: :was_attached?
+        def was_attached?
+          self.image.attached?
+        end
+      end
+    validatesのunlessオプションにメソッド名を指定することで、
+    「メソッドの返り値がfalseならばバリデーションによる検証を行う」という条件を作っている
+    was_attached?メソッドは、self.image.attached?の記述によって画像があればtrue、なければfalseを返す仕組み
