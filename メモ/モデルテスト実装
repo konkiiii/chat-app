@@ -181,6 +181,7 @@
           end
         end
       end
+    ・以下のテストコードを実装する
       ・nameの値が存在すれば作成できる
         expect(@room).to be_valid
       ・nameが空では作成できない
@@ -188,3 +189,56 @@
         @room.valid?
         expect(@room.errors.full_messages).to include "Name can't be blank"
   ・Messageモデル
+    ・テスト項目
+    ・値が空ではDBに保存できないこと
+      ・モデルテストの雛形(spec/models/message_spec.rb)
+        require 'rails_helper'
+        RSpec.describe Message, type: :model do
+          before do
+            @message = FactoryBot.build(:message)
+          end
+        
+          describe 'メッセージ投稿' do
+            context 'メッセージが投稿できる場合' do
+              it 'contentとimageが存在していれば保存できる' do
+              end
+              it 'contentが空でも保存できる' do
+              end
+              it 'imageが空でも保存できる' do
+              end
+            end
+            context 'メッセージが投稿できない場合' do
+              it 'contentとimageが空では保存できない' do
+              end
+              it 'roomが紐付いていないと保存できない' do
+              end
+              it 'userが紐付いていないと保存できない' do
+              end
+            end
+          end
+        end
+      ・以下のテストコードを実装する
+        ・contentとimageが存在していれば保存できる
+          expect(@message).to be_valid
+        ・contentが空でも保存できる
+          @message.content = ""
+          expect(@message).to be_valid
+        ・imageが空でも保存できる
+          @message.image = nil
+          # 入力じゃなくデータになるので""ではなくnilにする
+          expect(@message).to be_valid
+        ・contentとimageが空では保存できない
+          @message.content = ""
+          @message.image = nil
+          @message.valid?
+          expect(@message.errors.full_messages).to include "Content can't be blank"
+        ・roomが紐付いていないと保存できない
+          @message.room = nil
+          # 入力じゃなくデータになるので""ではなくnilにする
+          @message.valid?
+          expect(@message.errors.full_messages).to include "Room must exist"
+        ・userが紐付いていないと保存できない
+          @message.user = nil
+          # 入力じゃなくデータになるので""ではなくnilにする
+          @message.valid?
+          expect(@message.errors.full_messages).to include "User must exist"
