@@ -1,0 +1,244 @@
+・モデルテストの実装
+  ・RSpecの準備
+    ・必要なGemをインストール
+      gem 'rspec-rails'
+      gem 'factory_bot_rails'
+      gem 'faker'
+
+      % bundle install(ターミナル)
+      % rails g rspec:install(ターミナル)
+    ・テストの実行ログのフォーマットを整えるように設定
+      ・テスト結果のログを見やすくする(.rspec に記述)
+        --require spec_helper
+        --format documentation (この行だけ)
+        これを記述することでテスト実行時のログがより詳細に表示されるようになる
+      ・エラーメッセージを英語にする
+        I18n.locale = "en" (spec/rails_helper.rb)
+        RSpec.configure do |config| 〜 end の外(上)に記載
+    ・FactoryBotに必要な値を指定
+      ・使用するFactoryBotのファイルを生成
+        spec/factories/messages.rb, rooms.rb, users.rb(ディレクトリ)
+        ↑3つのファイルを作成する
+        spec/factories/messages.rbに下記を記載
+          FactoryBot.define do
+            factory :message do
+              content {Faker::Lorem.sentence}
+              association :user
+              association :room
+            end
+          end
+        spec/factories/rooms.rbに下記を記載
+          FactoryBot.define do
+            factory :room do
+              name {Faker::Team.name}
+            end
+          end
+        spec/factories/users.rbに下記を記載
+          FactoryBot.define do
+            factory :user do
+              name {Faker::Name.last_name}
+              email {Faker::Internet.free_email}
+              password {Faker::Internet.password(min_length: 6)}
+              password_confirmation {password}
+            end
+          end
+      ・テスト用画像を用意する
+        public/images/test_image.png(テスト画像)
+        ・afterメソッド
+          任意の処理の後に指定の処理を実行することができる
+          spec/factories/messages.rbを編集する
+              ~省略~
+              association :room
+
+              after(:build) do |message|
+                message.image.attach(io: File.open('public/images/test_image.png'), filename: 'test_image.png')
+              end
+              ~省略~
+          io: File.openで設定したパスのファイル（public/images/test_image.png）を、test_image.pngというファイル名で保存している
+      ・コンソールでファクトリーボットが使用できるかを確認する
+        % rails c
+        pry(main)> FactoryBot.create(:user)
+        pry(main)> FactoryBot.create(:room)
+        pry(main)> FactoryBot.create(:message)
+        ※KeyErrorとでたら下記を実行
+          pry(main)> exit(コンソール終了)
+          % spring stop(Springの停止)
+        ・画像がActive Storageに保存できているか確認
+          画像が保存できているか確認するにはimage.attached?で確認
+            pry(main)> message = FactoryBot.create(:message)
+            pry(main)> message.image.attached?
+            ~省略~
+            => true こうなればOK、KeyErrorが出る場合は上記を再実行
+          pry(main)> exit(コンソール終了)
+      ・テストコードを記述するファイルを用意する
+        % rails g rspec:model user
+        →spec/models/user_spec.rb が作られていればOK
+        % rails g rspec:model room
+        →spec/models/room_spec.rb が作られていればOK
+        % rails g rspec:model message
+        →spec/models/message_spec.rb が作られていればOK
+        ・不要な記述を削除する
+          pending "add some examples to (or delete) #{__FILE__}"  # 削除
+  ・Userモデル
+   ・テスト項目
+    ・値が空ではDBに保存できないこと
+      ・モデルテストの雛形(spec/models/user_spec.rb)
+        require 'rails_helper'
+
+        RSpec.describe User, type: :model do
+          before do
+            @user = FactoryBot.build(:user)
+          end
+
+          describe 'ユーザー新規登録' do
+            context '新規登録できる場合' do
+              it "nameとemail、passwordとpassword_confirmationが存在すれば登録できる" do
+
+              end
+            end
+            context '新規登録できない場合' do
+              it "nameが空では登録できない" do
+
+              end
+              it "emailが空では登録できない" do
+
+              end
+              it "passwordが空では登録できない" do
+
+              end
+            end
+          end
+        end
+      ・以下のテストコードを実装する
+        ・nameとemail、passwordとpassword_confirmationが存在すれば登録できる
+          expect(@user).to be_valid
+        ・nameが空では登録できない
+          @user.name = ""
+          @user.valid?
+          expect(@user.errors.full_messages).to include "Name can't be blank"
+        ・emailが空では登録できない
+          @user.email = ""
+          @user.valid?
+          expect(@user.errors.full_messages).to include "Email can't be blank"
+        ・passwordが空では登録できない
+          @user.password = ""
+          @user.valid?
+          expect(@user.errors.full_messages).to include "Password can't be blank"
+    ・passwordカラムは、文字数や確認用との不一致によってはDBに保存できないこと
+        ・雛形追加
+          it 'pa  sswordが5文字以下では登録できない' do
+          end
+          it 'passwordが129文字以上では登録できない' do
+          end
+          it 'passwordとpassword_confirmationが不一致では登録できない' do
+          end
+      ・passwordが5文字以下では登録できない
+        @user.password = "12345"
+        @user.password_confirmation = "12345"
+        @user.valid?
+        expect(@user.errors.full_messages).to include "Password is too short (minimum is 6 characters)"
+      ・passwordが129文字以上では登録できない
+        @user.password = Faker::Internet.password(min_length: 129)
+        @user.password_confirmation = @user.password
+        @user.valid?
+        expect(@user.errors.full_messages).to include "Password is too long (maximum is 128 characters)"
+      ・passwordとpassword_confirmationが不一致では登録できない
+        @user.password = "123456"
+        @user.password_confirmation = "123457"
+        @user.valid?
+        expect(@user.errors.full_messages).to include "Password confirmation doesn't match Password"
+    ・すでにDBに保存されているemailや@を含まないemailは保存できないこと
+        ・雛形追加
+          it '重複したemailが存在する場合は登録できない' do
+          end
+          it 'emailは@を含まないと登録できない' do
+          end
+      ・重複したemailが存在する場合は登録できない
+        @user.save
+        another_user = FactoryBot.build(:user, email: @user.email)
+        another_user.valid?
+        expect(another_user.errors.full_messages).to include "Email has already been taken"
+      ・emailは@を含まないと登録できない
+        @user.email = "abcde"
+        @user.valid?
+        expect(@user.errors.full_messages).to include "Email is invalid"
+  ・Roomモデル
+  ・値が空ではDBに保存できないこと
+    ・モデルテストの雛形(spec/models/room_spec.rb)
+      require 'rails_helper'
+      RSpec.describe Room, type: :model do
+        before do
+          @room = FactoryBot.build(:room)
+        end
+        describe 'チャットルーム作成' do
+          context '新規作成できる場合' do
+            it "nameの値が存在すれば作成できる" do
+            end
+          end
+          context '新規作成できない場合' do
+            it "nameが空では作成できない" do
+            end
+          end
+        end
+      end
+    ・以下のテストコードを実装する
+      ・nameの値が存在すれば作成できる
+        expect(@room).to be_valid
+      ・nameが空では作成できない
+        @room.name = ""
+        @room.valid?
+        expect(@room.errors.full_messages).to include "Name can't be blank"
+  ・Messageモデル
+    ・テスト項目
+    ・値が空ではDBに保存できないこと
+      ・モデルテストの雛形(spec/models/message_spec.rb)
+        require 'rails_helper'
+        RSpec.describe Message, type: :model do
+          before do
+            @message = FactoryBot.build(:message)
+          end
+        
+          describe 'メッセージ投稿' do
+            context 'メッセージが投稿できる場合' do
+              it 'contentとimageが存在していれば保存できる' do
+              end
+              it 'contentが空でも保存できる' do
+              end
+              it 'imageが空でも保存できる' do
+              end
+            end
+            context 'メッセージが投稿できない場合' do
+              it 'contentとimageが空では保存できない' do
+              end
+              it 'roomが紐付いていないと保存できない' do
+              end
+              it 'userが紐付いていないと保存できない' do
+              end
+            end
+          end
+        end
+      ・以下のテストコードを実装する
+        ・contentとimageが存在していれば保存できる
+          expect(@message).to be_valid
+        ・contentが空でも保存できる
+          @message.content = ""
+          expect(@message).to be_valid
+        ・imageが空でも保存できる
+          @message.image = nil
+          # 入力じゃなくデータになるので""ではなくnilにする
+          expect(@message).to be_valid
+        ・contentとimageが空では保存できない
+          @message.content = ""
+          @message.image = nil
+          @message.valid?
+          expect(@message.errors.full_messages).to include "Content can't be blank"
+        ・roomが紐付いていないと保存できない
+          @message.room = nil
+          # 入力じゃなくデータになるので""ではなくnilにする
+          @message.valid?
+          expect(@message.errors.full_messages).to include "Room must exist"
+        ・userが紐付いていないと保存できない
+          @message.user = nil
+          # 入力じゃなくデータになるので""ではなくnilにする
+          @message.valid?
+          expect(@message.errors.full_messages).to include "User must exist"
