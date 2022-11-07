@@ -1,0 +1,84 @@
+・モデルテストの実装
+  ・RSpecの準備
+    ・必要なGemをインストール
+      gem 'rspec-rails'
+      gem 'factory_bot_rails'
+      gem 'faker'
+
+      % bundle install(ターミナル)
+      % rails g rspec:install(ターミナル)
+    ・テストの実行ログのフォーマットを整えるように設定
+      ・テスト結果のログを見やすくする(.rspec に記述)
+        --require spec_helper
+        --format documentation (この行だけ)
+        これを記述することでテスト実行時のログがより詳細に表示されるようになる
+      ・エラーメッセージを英語にする
+        I18n.locale = "en" (spec/rails_helper.rb)
+        RSpec.configure do |config| 〜 end の外(上)に記載
+    ・FactoryBotに必要な値を指定
+      ・使用するFactoryBotのファイルを生成
+        spec/factories/messages.rb, rooms.rb, users.rb(ディレクトリ)
+        ↑3つのファイルを作成する
+        spec/factories/messages.rbに下記を記載
+          FactoryBot.define do
+            factory :message do
+              content {Faker::Lorem.sentence}
+              association :user
+              association :room
+            end
+          end
+        spec/factories/rooms.rbに下記を記載
+          FactoryBot.define do
+            factory :room do
+              name {Faker::Team.name}
+            end
+          end
+        spec/factories/users.rbに下記を記載
+          FactoryBot.define do
+            factory :user do
+              name {Faker::Name.last_name}
+              email {Faker::Internet.free_email}
+              password {Faker::Internet.password(min_length: 6)}
+              password_confirmation {password}
+            end
+          end
+      ・テスト用画像を用意する
+        public/images/test_image.png(テスト画像)
+        ・afterメソッド
+          任意の処理の後に指定の処理を実行することができる
+          spec/factories/messages.rbを編集する
+              ~省略~
+              association :room
+
+              after(:build) do |message|
+                message.image.attach(io: File.open('public/images/test_image.png'), filename: 'test_image.png')
+              end
+              ~省略~
+          io: File.openで設定したパスのファイル（public/images/test_image.png）を、test_image.pngというファイル名で保存している
+      ・コンソールでファクトリーボットが使用できるかを確認する
+        % rails c
+        pry(main)> FactoryBot.create(:user)
+        pry(main)> FactoryBot.create(:room)
+        pry(main)> FactoryBot.create(:message)
+        ※KeyErrorとでたら下記を実行
+          pry(main)> exit(コンソール終了)
+          % spring stop(Springの停止)
+        ・画像がActive Storageに保存できているか確認
+          画像が保存できているか確認するにはimage.attached?で確認
+            pry(main)> message = FactoryBot.create(:message)
+            pry(main)> message.image.attached?
+            ~省略~
+            => true こうなればOK、KeyErrorが出る場合は上記を再実行
+          pry(main)> exit(コンソール終了)
+      ・テストコードを記述するファイルを用意する
+        % rails g rspec:model user
+        →spec/models/user_spec.rb が作られていればOK
+        % rails g rspec:model room
+        →spec/models/room_spec.rb が作られていればOK
+        % rails g rspec:model message
+        →spec/models/message_spec.rb が作られていればOK
+        ・不要な記述を削除する
+          pending "add some examples to (or delete) #{__FILE__}"  # 削除
+  ・Userモデル
+  ・Roomモデル
+  ・Messageモデル
