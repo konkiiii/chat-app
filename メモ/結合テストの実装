@@ -31,8 +31,31 @@
         end
       end
     ・未ログイン状態のとき、サインインページに移動する
-    
+      # トップページに遷移する
+      visit root_path
+      # ログインしていない場合、サインインページに遷移していることを確認する
+      expect(current_path).to eq(new_user_session_path)
     ・ログインに成功し、トップページに遷移する
+      # 予め、ユーザーをDBに保存する
+      @user = FactoryBot.create(:user)
+      # サインインページへ移動する
+      visit new_user_session_path
+      # ログインしていない場合、サインインページに遷移していることを確認する
+      expect(current_path).to new_user_session_path
+      # すでに保存されているユーザーのemailとpasswordを入力する
+      fill_in 'Email', with: @user.email
+      fill_in 'Password', with: @user.password
+      # ログインボタンをクリックする
+      click_on("Log in")
+      # トップページに遷移していることを確認する
+      expect(current_path).to eq(root_path)
     ・ログインに失敗し、再びサインインページに戻ってくる
+      # 誤ったユーザー情報を入力する
+      fill_in 'Email', with: 'test'
+      fill_in 'Password', with: 'test'
+      # サインインページに戻ってきていることを確認する
+      expect(current_path).to eq(new_user_session_path)
+      #他の項目は上と同じ
   ・メッセージ投稿機能
+  
   ・チャット削除機能
