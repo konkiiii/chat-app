@@ -56,6 +56,36 @@
       # サインインページに戻ってきていることを確認する
       expect(current_path).to eq(new_user_session_path)
       #他の項目は上と同じ
+    ・ログイン処理をまとめる
+      ・処理をまとめたファイルを作成
+        spec/support/sign_in_support.rb
+        module SignInSupport
+          def sign_in(user)
+            visit root_path
+            fill_in 'user_email', with: user.email
+            fill_in 'user_password', with: user.password
+            click_on('Log in')
+            expect(current_path).to eq(root_path)
+          end
+        end
+    ・テスト実行時にログイン処理が読み込まれるように設定する
+      spec/rails_helper.rb
+      # コメントアウトを外す 23行目らへん
+      Dir[Rails.root.join('spec', 'support', '**', '*.rb')].sort.each { |f| require f }
+      # ~中略~
+      RSpec.configure do |config|
+      #下記追記
+      config.include SignInSupport
+    ・FactoryBotで中間テーブルの値を定義する
+      ・ファイルを作成
+      spec/factories/room_users.rb
+      ・アソシエーション情報をFactoryBotに指定する
+      FactoryBot.define do
+        factory :room_user do
+          association :user
+          association :room
+        end
+      end
   ・メッセージ投稿機能
-  
+
   ・チャット削除機能
