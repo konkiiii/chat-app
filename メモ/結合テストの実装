@@ -1,0 +1,226 @@
+・結合テストの実装
+  ・結合テストの準備
+    ・作業ファイルの作成
+      % rails g rspec:system user
+      % rails g rspec:system room
+      % rails g rspec:system message
+      spec/system/messages_spec.rb,rooms_spec.rb,users_spec.rb
+  ・ユーザーログイン機能
+    ・雛形記述(spec/system/users_spec.rb)
+      require 'rails_helper'
+      RSpec.describe 'ユーザーログイン機能', type: :system do
+        it 'ログインしていない状態でトップページにアクセスした場合、サインインページに移動する' do
+          # トップページに遷移する
+          # ログインしていない場合、サインインページに遷移していることを確認する
+        end
+        it 'ログインに成功し、トップページに遷移する' do
+          # 予め、ユーザーをDBに保存する
+          # サインインページへ移動する
+          # ログインしていない場合、サインインページに遷移していることを確認する
+          # すでに保存されているユーザーのemailとpasswordを入力する
+          # ログインボタンをクリックする
+          # トップページに遷移していることを確認する
+        end
+        it 'ログインに失敗し、再びサインインページに戻ってくる' do
+          # 予め、ユーザーをDBに保存する
+          # トップページに遷移する
+          # ログインしていない場合、サインインページに遷移していることを確認する
+          # 誤ったユーザー情報を入力する
+          # ログインボタンをクリックする
+          # サインインページに戻ってきていることを確認する
+        end
+      end
+    ・未ログイン状態のとき、サインインページに移動する
+      # トップページに遷移する
+      visit root_path
+      # ログインしていない場合、サインインページに遷移していることを確認する
+      expect(current_path).to eq(new_user_session_path)
+    ・ログインに成功し、トップページに遷移する
+      # 予め、ユーザーをDBに保存する
+      @user = FactoryBot.create(:user)
+      # サインインページへ移動する
+      visit new_user_session_path
+      # ログインしていない場合、サインインページに遷移していることを確認する
+      expect(current_path).to new_user_session_path
+      # すでに保存されているユーザーのemailとpasswordを入力する
+      fill_in 'Email', with: @user.email
+      fill_in 'Password', with: @user.password
+      # ログインボタンをクリックする
+      click_on("Log in")
+      # トップページに遷移していることを確認する
+      expect(current_path).to eq(root_path)
+    ・ログインに失敗し、再びサインインページに戻ってくる
+      # 誤ったユーザー情報を入力する
+      fill_in 'Email', with: 'test'
+      fill_in 'Password', with: 'test'
+      # サインインページに戻ってきていることを確認する
+      expect(current_path).to eq(new_user_session_path)
+      #他の項目は上と同じ
+    ・ログイン処理をまとめる
+      ・処理をまとめたファイルを作成
+        spec/support/sign_in_support.rb
+        module SignInSupport
+          def sign_in(user)
+            visit root_path
+            fill_in 'user_email', with: user.email
+            fill_in 'user_password', with: user.password
+            click_on('Log in')
+            expect(current_path).to eq(root_path)
+          end
+        end
+    ・テスト実行時にログイン処理が読み込まれるように設定する
+      spec/rails_helper.rb
+      # コメントアウトを外す 23行目らへん
+      Dir[Rails.root.join('spec', 'support', '**', '*.rb')].sort.each { |f| require f }
+      # ~中略~
+      RSpec.configure do |config|
+      #下記追記
+      config.include SignInSupport
+    ・FactoryBotで中間テーブルの値を定義する
+      ・ファイルを作成
+      spec/factories/room_users.rb
+      ・アソシエーション情報をFactoryBotに指定する
+      FactoryBot.define do
+        factory :room_user do
+          association :user
+          association :room
+        end
+      end
+  ・メッセージ投稿機能
+    ・雛形記述(spec/system/messages_spec.rb)
+      require 'rails_helper'
+      RSpec.describe 'メッセージ投稿機能', type: :system do
+        before do
+          # 中間テーブルを作成して、usersテーブルとroomsテーブルのレコードを作成する
+          @room_user = FactoryBot.create(:room_user)
+        end
+        context '投稿に失敗したとき' do
+          it '送る値が空の為、メッセージの送信に失敗する' do
+            # サインインする
+            sign_in(@room_user.user)
+            # 作成されたチャットルームへ遷移する
+            click_on(@room_user.room.name)
+            # DBに保存されていないことを確認する
+            # 元のページに戻ってくることを確認する
+          end
+        end
+        context '投稿に成功したとき' do
+          it 'テキストの投稿に成功すると、投稿一覧に遷移して、投稿した内容が表示されている' do
+            # サインインする
+            sign_in(@room_user.user)
+            # 作成されたチャットルームへ遷移する
+            click_on(@room_user.room.name)
+            # 値をテキストフォームに入力する
+            # 送信した値がDBに保存されていることを確認する
+            # 投稿一覧画面に遷移していることを確認する
+            # 送信した値がブラウザに表示されていることを確認する
+          end
+          it '画像の投稿に成功すると、投稿一覧に遷移して、投稿した画像が表示されている' do
+            # サインインする
+            sign_in(@room_user.user)
+            # 作成されたチャットルームへ遷移する
+            click_on(@room_user.room.name)
+            # 添付する画像を定義する
+            image_path = Rails.root.join('public/images/test_image.png')
+            # 画像選択フォームに画像を添付する
+            # 送信した値がDBに保存されていることを確認する
+            # 投稿一覧画面に遷移していることを確認する
+            # 送信した画像がブラウザに表示されていることを確認する
+          end
+          it 'テキストと画像の投稿に成功する' do
+            # サインインする
+            sign_in(@room_user.user)
+            # 作成されたチャットルームへ遷移する
+            click_on(@room_user.room.name)
+            # 添付する画像を定義する
+            image_path = Rails.root.join('public/images/test_image.png')
+            # 画像選択フォームに画像を添付する
+            # 値をテキストフォームに入力する
+            # 送信した値がDBに保存されていることを確認する
+            # 送信した値がブラウザに表示されていることを確認する
+            # 送信した画像がブラウザに表示されていることを確認する
+          end
+        end
+      end
+    ・Rails.root.join
+      このRailsアプリケーションのトップ階層のディレクトリまでの絶対パスを取得できる
+      パスの情報に対してjoinメソッドを利用することで、引数として渡した文字列でのパス情報を、Rails.root のパスの情報につけることができる
+    ・送る値が空の為、メッセージの送信に失敗する を実装する
+      # DBに保存されていないことを確認する
+      expect{
+        find('input[name="commit"]').click
+      }.not_to change { Message.count }
+      #not_toのため、{}.by(0)にしなくていい
+      # 元のページに戻ってくることを確認する
+      expect(current_path).to eq(room_messages_path(@room_user.room))
+    ・テキストの投稿に成功すると、投稿一覧に遷移して、投稿した内容が表示されていること」をテスト
+      # 値をテキストフォームに入力する
+      post = 'テスト' #postは変数なのでなんでもいい
+      fill_in 'message_content', with: post
+      # 送信した値がDBに保存されていることを確認する
+      expect{
+        find('input[name="commit"]').click
+      }.to change {Message.count}
+      # 投稿一覧画面に遷移していることを確認する
+      expect(current_path).to eq(room_messages_path(@room_user.room))
+      # 送信した値がブラウザに表示されていることを確認する
+      expect(page).to have_content(post) #ここのpostも変数上記の変数と合っていれば🆗
+    ・attach_file メソッド
+      画像投稿を試すときに使用する
+      第一引数に画像をアップロードするinput要素のname属性の値、第二引数にアップロードする画像のパス、第三引数以降にはオプションでさまざまな値をとることができる
+      例 attach_file('message[image]', image_path)
+      ただし、この画像アップロード用のinput要素は、CSSにてdisplay: none;を設定しているため非表示になっている(class="hidden"参照)
+      このような状態のinput要素に画像を添付するには、オプションの引数を渡す必要があります。以下のように第三引数としてmake_visible: trueを渡す。
+      例 attach_file('message[image]', image_path, make_visible: true)
+    ・「画像の投稿に成功すると、投稿一覧に遷移して、投稿した画像が表示されていること」をテスト
+      # 画像選択フォームに画像を添付する
+      # attach_file('message[image]', room_messages_path, make_visible: true)
+      なぜ第二引数がimage_pathなのか
+      →添付画像を定義するの箇所でimage_pathと定義している
+      attach_file('message[image]', image_path, make_visible: true)
+      # 送信した値がDBに保存されていることを確認する
+      expect {
+        find('input[name="commit"]').click
+      }.to change {Message.count}.by(1)
+      # 投稿一覧画面に遷移していることを確認する
+      expect(current_path).to eq(room_messages_path(@room_user.room))
+      # 送信した画像がブラウザに表示されていることを確認する
+      expect(page).to have_selector('img')
+    ・「テキストと画像の両方を含んだ投稿が成功すること」をテスト
+      基本的に上記の上二つの組み合わせなので省略
+  ・チャット削除機能
+    ・雛形記述(spec/system/rooms_spec.rb)
+      require 'rails_helper'
+      RSpec.describe 'チャットルームの削除機能', type: :system do
+        before do
+          @room_user = FactoryBot.create(:room_user)
+        end
+        it 'チャットルームを削除すると、関連するメッセージがすべて削除されている' do
+          # サインインする
+          sign_in(@room_user.user)
+          # 作成されたチャットルームへ遷移する
+          click_on(@room_user.room.name)
+          # メッセージ情報を5つDBに追加する
+          # 「チャットを終了する」ボタンをクリックすることで、作成した5つのメッセージが削除されていることを確認する
+          # トップページに遷移していることを確認する
+        end
+      end
+    ・create_list メソッド
+      FactoryBotの設定ファイルに存在しているレコードを、複数作成したい場合に使用するメソッド
+      create_listを用いることで、一度に複数のテストデータを生成できる
+      例 FactoryBot.create_list(:hoge, 3)
+      第１引数には作成したいインスタンスをシンボル型で記述し、第２引数に作成するレコードの個数を指定
+      上記の例では、hogesテーブルのレコードを3つ作成し、DBに保存
+      第３引数以降では、オプションとして「カラムの値を指定」することもできる
+      例 FactoryBot.create_list(:hoge, 3, title: 'Hello world')
+      同様の原理で、外部キーの値を指定するとhas_many関係のデータを生成することもできる
+      例 FactoryBot.create_list(:hoge, 3, title: 'Hello world', user_id: @user.id)
+    ・「チャットルームを削除すると、関連するメッセージがすべて削除されている」をテスト
+      # メッセージ情報を5つDBに追加する
+      FactoryBot.create_list(:message, 5, room_id: @room_user.room.id, user_id: @room_user.user.id)
+      # 「チャットを終了する」ボタンをクリックすることで、作成した5つのメッセージが削除されていることを確認する
+      expect{
+        find_link('チャットを終了する', href: room_path(@room_user.room)).click
+      }.to change { @room_user.room.messages.count }.by(-5)
+      # トップページに遷移していることを確認する
+      expect(current_path).to eq(root_path)
